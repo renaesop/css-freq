@@ -5,16 +5,24 @@
 const nmstart = '[_a-z]';
 const nmchar = '[_a-z0-9-]';
 const identifier = `-?${nmstart}${nmchar}*`;
-const namespace_prefix = `(${identifier}|*)`;
+const namespace_prefix = `(${identifier}|\\*)`;
 const element_name =  identifier;
 const type_selector = `${namespace_prefix}?${element_name}`;
-const class_name = `.${identifier}`;
+const class_name = `\\.${identifier}`;
 const hash = `#${nmchar}+`;
-const string = `('([^']|\\')*'|"([^']|\\")*")`
-const attrib = `\\[[^=]+(=(${string}|${identifier})?)?\\]`;
-const pseudo = `::?`;
-const negation = ``;
+const functional_pseudo  = `${identifier}\\([^)]+\\)`;
+const string = `('([^']|\\')*'|"([^']|\\")*")`;
+const attrib = `\\[\\s*${namespace_prefix}?${identifier}\s*([~!^$*]?=(${string}|${identifier})?)?\\]`;
+const pseudo = `::?(${functional_pseudo}|${identifier})`;
+const negation = ':not(';
 const universal = '*';
+
+const combinators = [
+  /^\s*(\+)\s*/,
+  /^\s*(~)\s*/,
+  /^\s*(>)\s*/,
+  /^\s*(\s)\s*/,
+];
 
 const simpleSel = {
   class_name,
@@ -34,42 +42,39 @@ class Selector {
     this.source = str.trim();
     this.idx = 0;
     this.state = stateList.Start;
+    this.inNot = false;
+    this.acceptCombinator = false;
+    this.afterCombinator = false;
   }
-  getAnyType(substr) {
-    if (substr[0] === universal) {
-      this.idx++;
-      return {
-        type: 'universal',
-        val: '*',
-      };
+  throws() {
+    this.err = new Error('No selector matched at ' + this.source.slice(this.idx));
+    throw this.err;
+  }
+  nextSelector() {
+    if (this.idx >= this.source.length) {
+      if (this.afterCombinator) this.throws();
+      return null;
     }
-    var res = substr.match(new RegExp(type_selector));
-    if (res) {
-      this.idx += res[0].length;
-      return {
-        type: 'type',
-        val: res[0],
-      }
-    }
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      var res = substr.match(new RegExp(simpleSel[key]));
-      if (res) {
-        this.idx += res[0].length;
-        return {
-          type: key,
-          val: res[0],
+    if (this.err) throw this.err;
+    const substr = this.source.slice(this.idx);
+    if (!this.inNot && this.acceptCombinator) {
+      for (let i = 0; i < combinators.length; i++) {
+        const key = combinators[i];
+        var res = substr.match(key);
+        if (res) {
+          this.acceptCombinator = false;
+          this.afterCombinator = true;
+          this.state = stateList.Start;
+          this.idx += res[0].length;
+          return {
+            type: 'combinator',
+            val: res[1],
+          };
         }
       }
     }
-  }
-  nextSelector() {
-    if (this.err) throw this.err;
-    if (/\S/.test(this.source[this.idx])) {
-      this.state = stateList.Start;
-      return this.nextSelector();
-    }
-    const substr = this.source.slice(this.idx);
+    this.acceptCombinator = true;
+    this.afterCombinator = false;
     if (this.state === stateList.Start) {
       this.state = stateList.noNameSpace;
       if (substr[0] === universal) {
@@ -79,7 +84,7 @@ class Selector {
           val: '*',
         };
       }
-      var res = substr.match(new RegExp(type_selector));
+      var res = substr.match(new RegExp('^' + type_selector));
       if (res) {
         this.idx += res[0].length;
         return {
@@ -88,10 +93,27 @@ class Selector {
         }
       }
     }
+     if (!this.inNot && substr.indexOf(negation) === 0) {
+        this.inNot = true;
+        this.idx += negation.length;
+        this.state = stateList.Start;
+        const sel1 = this.nextSelector();
+        this.inNot =false;
+        this.state = stateList.noNameSpace;
+        const substr1 = this.source.slice(this.idx).trim();
+        if (substr1[0] === ')') {
+          this.idx ++;
+          return {
+            type: 'neg',
+            val: sel1,
+          }
+        }
+    }
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
-      var res = substr.match(new RegExp(simpleSel[key]));
+      var res = substr.match(new RegExp('^' + simpleSel[key]));
       if (res) {
+        if (res[0] === ':not') break;
         this.idx += res[0].length;
         return {
           type: key,
@@ -99,16 +121,9 @@ class Selector {
         }
       }
     }
-    var res = substr.match(new RegExp(negation));
-    if (res) {
-      this.idx += res[0].length;
-      const substr1 = res[0].slice(':not('.length, -1).trim();
-      return {
-        type: 'neg',
-        val: this.getAnyType(substr1),
-      }
-    }
-    this.err = new Error('No selector matched at ' + substr);
-    throw this.err;
+  
+    this.throws();
   }
 }
+
+module.exports = Selector;
