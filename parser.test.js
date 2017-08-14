@@ -8,6 +8,7 @@ const selectors = [
 	'*:not([a=")"])',
 	'div + .antd *',
 	'* +*',
+	':not([a=")]"]):not(.a):not(#a):not([class~="])"])'
 ]
 
 test(t => {

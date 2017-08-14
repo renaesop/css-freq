@@ -11,8 +11,8 @@ const type_selector = `${namespace_prefix}?${element_name}`;
 const class_name = `\\.${identifier}`;
 const hash = `#${nmchar}+`;
 const functional_pseudo  = `${identifier}\\([^)]+\\)`;
-const string = `('([^']|\\')*'|"([^']|\\")*")`;
-const attrib = `\\[\\s*${namespace_prefix}?${identifier}\s*([~!^$*]?=(${string}|${identifier})?)?\\]`;
+const string = `('([^']|\\\\')*'|"(\\\\"|[^"])*")`;
+const attrib = `\\[\\s*${namespace_prefix}?${identifier}\\s*([~!^$*]?=(${string}|${identifier})?)?\\]`;
 const pseudo = `::?(${functional_pseudo}|${identifier})`;
 const negation = ':not(';
 const universal = '*';
@@ -85,7 +85,7 @@ class Selector {
           val: '*',
         };
       }
-      var res = substr.match(new RegExp('^' + type_selector));
+      let res = substr.match(new RegExp('^' + type_selector));
       if (res) {
         this.idx += res[0].length;
         return {
@@ -112,7 +112,8 @@ class Selector {
     }
     for (let i = 0; i < keys.length; i++) {
       const key = keys[i];
-      var res = substr.match(new RegExp('^' + simpleSel[key]));
+      let res = substr.match(new RegExp('^' + simpleSel[key]));
+
       if (res) {
         this.idx += res[0].length;
         return {
