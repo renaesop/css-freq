@@ -2,8 +2,8 @@
  * Created by fed on 2017/8/11.
  */
 
-const nmstart = '[_a-z]';
-const nmchar = '[_a-z0-9-]';
+const nmstart = '[_a-zA-Z]';
+const nmchar = '[_a-zA-Z0-9-]';
 const identifier = `-?${nmstart}${nmchar}*`;
 const namespace_prefix = `(${identifier}|\\*)`;
 const element_name =  identifier;
@@ -47,6 +47,7 @@ class Selector {
     this.afterCombinator = false;
   }
   throws() {
+    console.log(this.source)
     this.err = new Error('No selector matched at ' + this.source.slice(this.idx));
     throw this.err;
   }
@@ -113,7 +114,6 @@ class Selector {
       const key = keys[i];
       var res = substr.match(new RegExp('^' + simpleSel[key]));
       if (res) {
-        if (res[0] === ':not') break;
         this.idx += res[0].length;
         return {
           type: key,
