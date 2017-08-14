@@ -35,7 +35,8 @@ function getUnits(sel) {
     .filter(item => item.type !== 'combinator')
     .map(item => {
       if (item.type === 'neg') {
-        return item.val.type;
+        item.type = item.val.type;
+        item.val = item.val.val;
       }
       if (item.type === 'pseudo') {
         if (item.val.indexOf('::') === 0 || specialPseudoEle.indexOf(item.val) > -1 ) {

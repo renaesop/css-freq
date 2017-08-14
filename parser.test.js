@@ -8,7 +8,8 @@ const selectors = [
 	'*:not([a=")"])',
 	'div + .antd *',
 	'* +*',
-	':not([a=")]"]):not(.a):not(#a):not([class~="])"])'
+	':not([a=")]"]):not(.a):not(#a):not([class~="])"])',
+	'.ant-tree.ant-tree-show-line li:not(:last-child):before'
 ]
 
 test(t => {
